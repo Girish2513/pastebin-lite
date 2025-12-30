@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pastebin Lite
 
-## Getting Started
+A simple Pastebin-like application where users can create text pastes and share a link to view them.
 
-First, run the development server:
+## Features
+- Create a text paste
+- Shareable URL
+- Optional expiry (TTL)
+- Optional view count limit
+- Safe rendering (no script execution)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Tech Stack
+- Next.js (App Router)
+- JavaScript
+- Vercel KV (Redis) for persistence
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## API Endpoints
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Health Check
+GET /api/healthz
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Create Paste
+POST /api/pastes
 
-## Learn More
+Request body:
+```json
+{
+  "content": "Hello world",
+  "ttl_seconds": 60,
+  "max_views": 5
+}
+Fetch Paste (API)
 
-To learn more about Next.js, take a look at the following resources:
+GET /api/pastes/:id
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+View Paste (HTML)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+GET /p/:id
 
-## Deploy on Vercel
+Persistence
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Uses Vercel KV (Redis) in production.
+Local development uses an in-memory store for simplicity.
