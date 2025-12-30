@@ -1,54 +1,42 @@
+import { getPasteAndIncrement } from "@/lib/pasteService";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
-export default async function PastePage(props) {
-  const params = await props.params;
-  const id = params.id;
+export default async function PastePage({ params }) {
+  const { id } = await params;
+  const headersList = await headers();
 
-  const baseUrl =
-    process.env.NODE_ENV === "production"
-      ? process.env.NEXT_PUBLIC_BASE_URL
-      : "http://localhost:3000";
+  // Wrap headers to match the Map-like interface expected by our service
+  const reqHeaders = {
+    get: (name) => headersList.get(name),
+  };
 
-  const res = await fetch(`${baseUrl}/api/pastes/${id}`, {
-    cache: "no-store",
-  });
+  const { paste, error } = await getPasteAndIncrement(id, reqHeaders);
 
-  // If paste is unavailable → 404 page
-  if (!res.ok) {
+  if (error) {
     notFound();
   }
 
-  const data = await res.json();
-
   return (
-    <main style={{ padding: "40px" }}>
-      <h1>Paste</h1>
-
+    <main style={{ padding: "40px", maxWidth: "800px", color: "#f5f5f5" }}>
+      <h1 style={{ marginBottom: "20px" }}>Paste Content</h1>
       <pre
         style={{
-            background: "#1e1e1e",   // dark background
-            color: "#f5f5f5",        // light text
-            padding: "20px",
-            borderRadius: "6px",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            fontFamily: "monospace",
+          background: "#1e1e1e",
+          padding: "20px",
+          border: "1px solid #444",
+          borderRadius: "4px",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+          fontFamily: "monospace",
         }}
       >
-        {data.content}
+        {paste.content}
       </pre>
-
-      {data.expires_at && (
-        <p style={{ marginTop: "10px", color: "#666" }}>
-          Expires at: {new Date(data.expires_at).toLocaleString()}
-        </p>
-      )}
-
-      {data.remaining_views !== null && (
-        <p style={{ marginTop: "5px", color: "#666" }}>
-          Remaining views: {data.remaining_views}
-        </p>
-      )}
+      <div style={{ marginTop: "20px", fontSize: "0.9em", color: "#888" }}>
+        {paste.expires_at && <p>Expires: {new Date(paste.expires_at).toLocaleString()}</p>}
+        {paste.max_views && <p>Views: {paste.views} / {paste.max_views}</p>}
+      </div>
     </main>
   );
 }

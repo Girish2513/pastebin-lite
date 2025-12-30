@@ -82,9 +82,9 @@ export async function POST(request) {
 
 
   // 7️⃣ Build URL
-  const baseUrl =  request.headers.get("origin") || "http://localhost:3000";
-
-  const url = `${baseUrl}/p/${id}`;
+  const host = request.headers.get("host");
+  const protocol = request.headers.get("x-forwarded-proto") || "http";
+  const url = `${protocol}://${host}/p/${id}`;
 
   return new Response(
     JSON.stringify({ id, url }),
