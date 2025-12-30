@@ -1,96 +1,57 @@
 import kv from "@/lib/kv";
 
 export async function POST(request) {
-  let body;
-
   try {
-    const text = await request.text();   // 👈 read raw body
-    body = JSON.parse(text);             // 👈 parse JSON manually
-  } catch (e) {
-    return new Response(
-      JSON.stringify({ error: "Invalid JSON body" }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-  }
+    const body = await request.json();
+    const { content, ttl_seconds, max_views } = body;
 
-  const { content, ttl_seconds, max_views } = body;
-
-  // 1️⃣ Validate content
-  if (!content || typeof content !== "string" || content.trim() === "") {
-    return new Response(
-      JSON.stringify({ error: "content is required" }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-  }
-
-  // 2️⃣ Validate ttl_seconds
-  if (ttl_seconds !== undefined) {
-    if (!Number.isInteger(ttl_seconds) || ttl_seconds < 1) {
-      return new Response(
-        JSON.stringify({ error: "ttl_seconds must be >= 1" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+    // 1. Validation
+    if (!content || typeof content !== "string" || content.trim() === "") {
+      return new Response(JSON.stringify({ error: "Content is required" }), { status: 400 });
     }
-  }
-
-  // 3️⃣ Validate max_views
-  if (max_views !== undefined) {
-    if (!Number.isInteger(max_views) || max_views < 1) {
-      return new Response(
-        JSON.stringify({ error: "max_views must be >= 1" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+    if (ttl_seconds !== undefined && (!Number.isInteger(ttl_seconds) || ttl_seconds < 1)) {
+      return new Response(JSON.stringify({ error: "Invalid TTL" }), { status: 400 });
     }
-  }
+    if (max_views !== undefined && (!Number.isInteger(max_views) || max_views < 1)) {
+      return new Response(JSON.stringify({ error: "Invalid max_views" }), { status: 400 });
+    }
 
-  // 4️⃣ Generate ID
-  const id = crypto.randomUUID();
+    // 2. Prepare Data
+    const id = Math.random().toString(36).substring(2, 10); // Simple random ID
+    const now = Date.now();
+    const expires_at = ttl_seconds ? now + (ttl_seconds * 1000) : null;
 
-  // 5️⃣ Calculate expiry
-  const createdAt = Date.now();
-  const expiresAt = ttl_seconds
-    ? createdAt + ttl_seconds * 1000
-    : null;
+    const pasteData = {
+      content,
+      views: 0,
+      max_views: max_views || null,
+      expires_at,
+      created_at: now,
+    };
 
-  // 6️⃣ Store paste
-  const paste = {
-    content,
-    created_at: createdAt,
-    expires_at: expiresAt,
-    max_views: max_views ?? null,
-    views: 0,
-  };
+    // 3. Persistence
+    if (process.env.NODE_ENV === "production") {
+      await kv.set(`paste:${id}`, pasteData);
+      if (ttl_seconds) await kv.expire(`paste:${id}`, ttl_seconds);
+    } else {
+      const { setPaste } = await import("@/lib/localStore");
+      setPaste(id, pasteData);
+    }
 
-  if (process.env.NODE_ENV === "production") {
-  await kv.set(`paste:${id}`, paste);
-} else {
-  const { setPaste } = await import("@/lib/localStore");
-  setPaste(id, paste);
-}
+    // 4. Response
+    const host = request.headers.get("host");
+    const protocol = request.headers.get("x-forwarded-proto") || "http";
+    const url = `${protocol}://${host}/p/${id}`;
 
-
-  // 7️⃣ Build URL
-  const host = request.headers.get("host");
-  const protocol = request.headers.get("x-forwarded-proto") || "http";
-  const url = `${protocol}://${host}/p/${id}`;
-
-  return new Response(
-    JSON.stringify({ id, url }),
-    {
+    return new Response(JSON.stringify({ id, url }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
-    }
-  );
+    });
+  } catch (error) {
+    console.error("Create paste failed:", error);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }
