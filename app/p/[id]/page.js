@@ -34,7 +34,7 @@ export default async function PastePage({ params }) {
         {paste.content}
       </pre>
       <div style={{ marginTop: "20px", fontSize: "0.9em", color: "#888" }}>
-        {paste.expires_at && <p>Expires: {new Date(paste.expires_at).toLocaleString()}</p>}
+        {paste.expires_at && <p>Expires: {new Date(paste.expires_at).toUTCString()}</p>}
         {paste.max_views && <p>Views: {paste.views} / {paste.max_views}</p>}
       </div>
     </main>
