@@ -11,7 +11,7 @@ export default async function PastePage({ params }) {
     get: (name) => headersList.get(name),
   };
 
-  const { paste, error } = await getPasteAndIncrement(id, reqHeaders, false);
+  const { paste, error } = await getPasteAndIncrement(id, reqHeaders);
 
   if (error) {
     notFound();
